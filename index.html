@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>代办</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <style type="text/css">
+        .container {
+            margin-top: 50px;
+        }
+
+        .form-control.error {
+            border-color: #dc3545;
+        }
+
+        .alert {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>代办事项</h1>
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#todo">代办</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#done">已完成</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#add">添加代办</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#add-model">添加模版</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#list-model">模版列表</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="todo">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>任务</th>
+                    <th>日期</th>
+                    <th>时间</th>
+                    <th>创建时间</th>
+                    <th>完成</th>
+                </tr>
+                </thead>
+                <tbody id="todo-list">
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="done">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>任务</th>
+                    <th>日期</th>
+                    <th>时间</th>
+                    <th>创建时间</th>
+                    <th>完成</th>
+                </tr>
+                </thead>
+                <tbody id="done-list">
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="add">
+            <div id="add-alert"></div>
+            <form id="add-form">
+                <div class="form-group">
+                    <label for="task-desc">描述</label>
+                    <input type="text" class="form-control" id="task-desc" name="task_desc" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-date">执行日期</label>
+                    <input type="date" class="form-control" id="task-date" name="task_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-time">执行时间</label>
+                    <input type="text" class="form-control" id="task-time" name="task_time" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Task</button>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="add-model">
+            <form id="add-model-form">
+                <div class="form-group">
+                    <label for="task-desc">描述</label>
+                    <input type="text" class="form-control" id="model-desc" name="task_desc" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-time">执行时间</label>
+                    <input type="text" class="form-control" id="model-time" name="task_time" required>
+                </div>
+                <button type="submit" class="btn btn-primary">添加模版</button>
+            </form>
+        </div>
+        <div class="tab-pane fade" id="list-model">
+            <button type="button" id="add-from-models-btn" class="btn btn-primary">从模版添加</button>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>任务</th>
+                    <th>时间</th>
+                    <th>创建时间</th>
+                </tr>
+                </thead>
+                <tbody id="model-list">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Load tasks
+        $.ajax({
+            url: "/api/tasks",
+            method: "GET",
+            dataType: "json",
+            success: function (response) {
+                var todoList = "";
+                var doneList = "";
+                $.each(response, function (index, task) {
+                    if (task.done == 0) {
+                        todoList += "<tr><td>" + task.task_id + "</td><td>" + task.task_desc + "</td><td>" + task.task_date + "</td><td>" + task.task_time + "</td><td>" + task.created_time + "</td><td><input type='checkbox' value='" + task.task_id + "'></td></tr>";
+                    } else {
+                        doneList += "<tr><td>" + task.task_id + "</td><td>" + task.task_desc + "</td><td>" + task.task_date + "</td><td>" + task.task_time + "</td><td>" + task.created_time + "</td><td><button class='undone-btn' data-taskid='" + task.task_id + "'>取消完成</button></td></tr>";
+                    }
+                });
+                $("#todo-list").html(todoList);
+                $("#done-list").html(doneList);
+                $("input[type='checkbox']").click(function () {
+                    var id = $(this).val();
+                    var done = $(this).is(":checked") ? 1 : 0;
+                    $.ajax({
+                        url: "/api/tasks/" + id,
+                        method: "PUT",
+                        data: {
+                            done: done
+                        },
+                        success: function () {
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            console.log(xhr.responseText);
+                        }
+                    });
+                });
+                $(".undone-btn").click(function () {
+                    var id = $(this).data("taskid");
+                    $.ajax({
+                        url: "/api/tasks/" + id,
+                        method: "PUT",
+                        data: {
+                            done: 0
+                        },
+                        success: function () {
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            console.log(xhr.responseText);
+                        }
+                    });
+                });
+            },
+            error: function (xhr, status, error) {
+                console.log(xhr.responseText);
+            }
+        });
+
+        // Load models
+        $.ajax({
+            url: "/api/models",
+            method: "GET",
+            dataType: "json",
+            success: function (response) {
+                var modelList = "";
+                $.each(response, function (index, model) {
+                    modelList += "<tr><td>" + model.task_id + "</td><td>" + model.task_desc + "</td><td>" + model.task_time + "</td><td>" + model.created_time + "</td><td><input type='checkbox' value='" + model.task_id + "'></td></tr>";
+                });
+                $("#model-list").html(modelList);
+                $("input[type='checkbox']").click(function () {
+                    var id = $(this).val();
+                    var done = $(this).is(":checked") ? 1 : 0;
+                    $.ajax({
+                        url: "/api/models/" + id,
+                        method: "DELETE",
+                        data: {
+                            done: done
+                        },
+                        success: function () {
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            console.log(xhr.responseText);
+                        }
+                    });
+                });
+
+            },
+            error: function (xhr, status, error) {
+                console.log(xhr.responseText);
+            }
+        });
+
+        // Add task
+        $("#add-form").submit(function (event) {
+            event.preventDefault();
+            $("#add-alert").html("").removeClass("alert-danger").removeClass("alert-success");
+            var formData = $(this).serialize();
+            $.ajax({
+                url: "/api/tasks",
+                method: "POST",
+                data: formData,
+                dataType: "json",
+                success: function (response) {
+                    // Add task to todo list
+                    var todoList = $("#todo-list").html();
+                    todoList += "<tr><td>" + response.task_id + "</td><td>" + response.task_desc + "</td><td>" + response.task_date + "</td><td>" + response.created_time + "</td><td>" + response.done + "</td></tr>";
+                    $("#todo-list").html(todoList);
+
+                    // Clear form
+                    $("#add-form")[0].reset();
+
+                    // Show success alert
+                    $("#add-alert").html("Task added successfully.").addClass("alert-success");
+                },
+                error: function (xhr, status, error) {
+                    // Show error alert
+                    $("#add-alert").html(xhr.responseText).addClass("alert-danger");
+                }
+            });
+        });
+
+        // Add task
+        $("#add-form").submit(function (event) {
+            event.preventDefault();
+            $("#add-alert").html("").removeClass("alert-danger").removeClass("alert-success");
+            var formData = $(this).serialize();
+            $.ajax({
+                url: "/api/tasks",
+                method: "POST",
+                data: formData,
+                dataType: "json",
+                success: function (response) {
+                    // Add task to todo list
+                    var todoList = $("#todo-list").html();
+                    todoList += "<tr><td>" + response.task_id + "</td><td>" + response.task_desc + "</td><td>" + response.task_date + "</td><td>" + response.created_time + "</td><td>" + response.done + "</td></tr>";
+                    $("#todo-list").html(todoList);
+
+                    // Clear form
+                    $("#add-form")[0].reset();
+
+                    // Show success alert
+                    $("#add-alert").html("Task added successfully.").addClass("alert-success");
+                },
+                error: function (xhr, status, error) {
+                    // Show error alert
+                    $("#add-alert").html(xhr.responseText).addClass("alert-danger");
+                }
+            });
+        });
+
+        // Add model
+        $("#add-model-form").submit(function (event) {
+            event.preventDefault();
+            $("#add-alert").html("").removeClass("alert-danger").removeClass("alert-success");
+            var formData = $(this).serialize();
+            $.ajax({
+                url: "/api/model",
+                method: "POST",
+                data: formData,
+                dataType: "json",
+                success: function (response) {
+                    // Clear form
+                    $("#add-model-form")[0].reset();
+                    // Show success alert
+                    $("#add-alert").html("Task added successfully.").addClass("alert-success");
+                },
+                error: function (xhr, status, error) {
+                    // Show error alert
+                    $("#add-alert").html(xhr.responseText).addClass("alert-danger");
+                }
+            });
+        });
+        // model to task
+        // Add task from model
+        $("#add-from-models-btn").click(function () {
+            $.ajax({
+                url: "/api/modeltotask",
+                method: "GET",
+                success: function () {
+                    location.reload();
+                },
+                error: function (xhr, status, error) {
+                    console.log(xhr.responseText);
+                }
+            });
+        });
+
+    });
+</script>
+
+</body>
+</html>

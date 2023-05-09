@@ -320,6 +320,18 @@ func main() {
 		db: db,
 	}
 	router := mux.NewRouter()
+
+	// Add a middleware that allows cross-origin resource sharing (CORS)
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set the Access-Control-Allow-Origin header to allow requests from any origin
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+
+			// Call the next handler
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./index.html")
 	})
@@ -333,5 +345,5 @@ func main() {
 	router.HandleFunc("/api/models/{task_id}", s.deleteModel).Methods("DELETE")
 	router.HandleFunc("/api/models", s.getModels).Methods("GET")
 	router.HandleFunc("/api/modeltotask", s.modelsToTask).Methods("GET")
-	log.Fatal(http.ListenAndServe(":9090", router))
+	log.Fatal(http.ListenAndServe(":2305", router))
 }

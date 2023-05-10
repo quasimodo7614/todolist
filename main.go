@@ -45,7 +45,8 @@ func formateTime(timeStr string) string {
 }
 func (s *server) checkTaskExists(taskDesc string) (bool, error) {
 	var exists bool
-	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM tasks WHERE task_desc = ? LIMIT 1)", taskDesc).Scan(&exists)
+	today := time.Now().Format("2006-01-02")
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM tasks WHERE task_desc = ? and task_date =? LIMIT 1)", taskDesc, today).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

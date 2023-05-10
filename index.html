@@ -129,8 +129,7 @@
 <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" ></script>
 <script>
     let host=""
-    $(document).ready(function () {
-        // Load tasks
+    function getTasks() {
         $.ajax({
             url: host+"/api/tasks",
             method: "GET",
@@ -185,6 +184,15 @@
                 console.log(xhr.responseText);
             }
         });
+    }
+    $(document).ready(function () {
+        // Load tasks
+        getTasks();
+
+        // Set interval to poll data every 5 seconds
+        setInterval(function() {
+            getTasks();
+        }, 5000);
 
         // Load models
         $.ajax({
@@ -242,10 +250,12 @@
 
                     // Show success alert
                     $("#add-alert").html("Task added successfully.").addClass("alert-success");
+                    getTasks();
                 },
                 error: function (xhr, status, error) {
                     // Show error alert
                     $("#add-alert").html(xhr.responseText).addClass("alert-danger");
+                    getTasks();
                 }
             });
         });

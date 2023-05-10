@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Task struct {
@@ -308,9 +309,14 @@ func (s *server) modelsToTask(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode("ok")
 }
-
+func getdburl() string {
+	if s := os.Getenv("MYSQL"); s != "" {
+		return s
+	}
+	return "root:123456@tcp(localhost:3306)/zze"
+}
 func main() {
-	db, err := sql.Open("sqlite3", "./todolist.db")
+	db, err := sql.Open("mysql", getdburl())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -326,6 +332,18 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set the Access-Control-Allow-Origin header to allow requests from any origin
 			w.Header().Set("Access-Control-Allow-Origin", "*")
+
+			// Set the Access-Control-Allow-Methods header to allow GET, POST, and OPTIONS requests
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+			// Set the Access-Control-Allow-Headers header to allow Content-Type and Authorization headers
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			// If the request method is OPTIONS, return a 200 status code and exit early
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 
 			// Call the next handler
 			next.ServeHTTP(w, r)

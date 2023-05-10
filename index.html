@@ -4,8 +4,7 @@
     <title>代办</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" >
     <style type="text/css">
         .container {
             margin-top: 50px;
@@ -124,10 +123,12 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>-->
+<!--<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>-->
+<script src="https://cdn.bootcdn.net/ajax/libs/popper.js/1.14.7/umd/popper.min.js" ></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" ></script>
 <script>
-    let host="http://ffff.chat/todo"
+    let host=""
     $(document).ready(function () {
         // Load tasks
         $.ajax({
@@ -218,35 +219,6 @@
             error: function (xhr, status, error) {
                 console.log(xhr.responseText);
             }
-        });
-
-        // Add task
-        $("#add-form").submit(function (event) {
-            event.preventDefault();
-            $("#add-alert").html("").removeClass("alert-danger").removeClass("alert-success");
-            var formData = $(this).serialize();
-            $.ajax({
-                url: host+"/api/tasks",
-                method: "POST",
-                data: formData,
-                dataType: "json",
-                success: function (response) {
-                    // Add task to todo list
-                    var todoList = $("#todo-list").html();
-                    todoList += "<tr><td>" + response.task_id + "</td><td>" + response.task_desc + "</td><td>" + response.task_date + "</td><td>" + response.created_time + "</td><td>" + response.done + "</td></tr>";
-                    $("#todo-list").html(todoList);
-
-                    // Clear form
-                    $("#add-form")[0].reset();
-
-                    // Show success alert
-                    $("#add-alert").html("Task added successfully.").addClass("alert-success");
-                },
-                error: function (xhr, status, error) {
-                    // Show error alert
-                    $("#add-alert").html(xhr.responseText).addClass("alert-danger");
-                }
-            });
         });
 
         // Add task

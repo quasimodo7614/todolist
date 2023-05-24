@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
 type Task struct {
@@ -46,7 +47,7 @@ func formateTime(timeStr string) string {
 func (s *server) checkTaskExists(taskDesc string) (bool, error) {
 	var exists bool
 	today := time.Now().Format("2006-01-02")
-	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM tasks WHERE task_desc = ? and task_date =? LIMIT 1)", taskDesc, today).Scan(&exists)
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM tasks WHERE task_desc = $1 AND task_date =$2 LIMIT 1)", taskDesc, today).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -55,7 +56,7 @@ func (s *server) checkTaskExists(taskDesc string) (bool, error) {
 
 func (s *server) getTasks(w http.ResponseWriter, r *http.Request) {
 	today := time.Now().Format("2006-01-02")
-	query := fmt.Sprintf(`SELECT task_id, task_desc, task_date, created_time, done,task_time FROM tasks Where task_date="%s" ORDER BY task_time`, today)
+	query := fmt.Sprintf(`SELECT task_id, task_desc, task_date, created_time, done,task_time FROM tasks WHERE task_date='%s' ORDER BY task_time`, today)
 	rows, err := s.db.Query(query)
 	if err != nil {
 		log.Println("getTasks:", err)
@@ -80,7 +81,7 @@ func (s *server) getTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getDoneTasks(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.db.Query("SELECT task_id, task_desc, task_date, created_time, done,task_time FROM tasks WHERE done = 1 ORDER BY task_time")
+	rows, err := s.db.Query("SELECT task_id, task_desc, task_date, created_time, done,task_time FROM tasks WHERE done = true ORDER BY task_time")
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
@@ -122,19 +123,19 @@ func (s *server) createTask(w http.ResponseWriter, r *http.Request) {
 
 	task.CreatedTime = time.Now().Format("2006-01-02 15:04:05")
 
-	result, err := s.db.Exec("INSERT INTO tasks (task_desc, task_date, created_time, done,task_time) VALUES (?, ?, ?, ?,?)",
+	_, err = s.db.Exec("INSERT INTO tasks (task_desc, task_date, created_time, done,task_time) VALUES ($1, $2, $3, $4, $5)",
 		task.TaskDesc, task.TaskDate, task.CreatedTime, 0, task.TaskTime)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		json.NewEncoder(w).Encode(err.Error())
-		return
-	}
-	task.TaskId = int(id)
+	//id, err := result.LastInsertId()
+	//if err != nil {
+	//	json.NewEncoder(w).Encode(err.Error())
+	//	return
+	//}
+	//task.TaskId = int(id)
 
 	json.NewEncoder(w).Encode(task)
 }
@@ -148,7 +149,7 @@ func (s *server) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.db.Exec("UPDATE tasks SET done = ? WHERE task_id = ?", done, taskId)
+	_, err = s.db.Exec("UPDATE tasks SET done = $1 WHERE task_id = $2", done, taskId)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
@@ -166,7 +167,7 @@ func (s *server) deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.db.Exec("DELETE FROM tasks WHERE task_id = ?", taskId)
+	_, err = s.db.Exec("DELETE FROM tasks WHERE task_id = $1", taskId)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
@@ -174,7 +175,6 @@ func (s *server) deleteTask(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
 
 	var model TaskModel
@@ -185,7 +185,7 @@ func (s *server) createModel(w http.ResponseWriter, r *http.Request) {
 
 	model.CreatedTime = time.Now().Format("2006-01-02 15:04:05")
 
-	_, err := s.db.Exec("INSERT INTO models (task_desc, created_time,task_time) VALUES (?, ?, ?)",
+	_, err := s.db.Exec("INSERT INTO models (task_desc, created_time, task_time) VALUES ($1, $2, $3)",
 		model.TaskDesc, model.CreatedTime, model.TaskTime)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
@@ -205,7 +205,7 @@ func (s *server) updateModel(w http.ResponseWriter, r *http.Request) {
 
 	desc := r.FormValue("task_desc")
 	timeExe := formateTime(r.FormValue("task_time"))
-	_, err = s.db.Exec("UPDATE models SET task_desc = ?,task_time=? WHERE task_id = ?", desc, timeExe, taskId)
+	_, err = s.db.Exec("UPDATE models SET task_desc = $1, task_time = $2 WHERE task_id = $3", desc, timeExe, taskId)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
@@ -223,7 +223,7 @@ func (s *server) deleteModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.db.Exec("DELETE FROM models WHERE task_id = ?", taskId)
+	_, err = s.db.Exec("DELETE FROM models WHERE task_id = $1", taskId)
 	if err != nil {
 		json.NewEncoder(w).Encode(err.Error())
 		return
@@ -234,7 +234,7 @@ func (s *server) deleteModel(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) getModels(w http.ResponseWriter, r *http.Request) {
 
-	query := "SELECT task_id, task_desc, created_time,task_time FROM models  ORDER BY task_time"
+	query := "SELECT task_id, task_desc, created_time, task_time FROM models ORDER BY task_time"
 
 	rows, err := s.db.Query(query)
 	if err != nil {
@@ -259,7 +259,7 @@ func (s *server) getModels(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) modelsToTask(w http.ResponseWriter, r *http.Request) {
 
-	rows, err := s.db.Query("SELECT task_id, task_desc, created_time,task_time FROM models  ORDER BY task_time")
+	rows, err := s.db.Query("SELECT task_id, task_desc, created_time, task_time FROM models ORDER BY task_time")
 	if err != nil {
 		log.Println("query model err:", err)
 		json.NewEncoder(w).Encode(err.Error())
@@ -300,7 +300,7 @@ func (s *server) modelsToTask(w http.ResponseWriter, r *http.Request) {
 	rows.Close()
 
 	for _, task := range tasks {
-		_, err = s.db.Exec("INSERT INTO tasks (task_desc, task_date, created_time, done,task_time) VALUES (?, ?, ?, ?,?)",
+		_, err = s.db.Exec("INSERT INTO tasks (task_desc, task_date, created_time, done, task_time) VALUES ($1, $2, $3, $4, $5)",
 			task.TaskDesc, task.TaskDate, task.CreatedTime, 0, task.TaskTime)
 		if err != nil {
 			log.Println("model to task err: ", err.Error(), " id:", task.TaskId, " desc:", task.TaskDesc)
@@ -310,14 +310,15 @@ func (s *server) modelsToTask(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode("ok")
 }
+
 func getdburl() string {
-	if s := os.Getenv("MYSQL"); s != "" {
+	if s := os.Getenv("PG_URL"); s != "" {
 		return s
 	}
-	return "root:123456@tcp(localhost:3306)/zze"
+	return "user=postgres password=123456 host=localhost port=5432 dbname=zze sslmode=disable"
 }
 func main() {
-	db, err := sql.Open("mysql", getdburl())
+	db, err := sql.Open("postgres", getdburl())
 	if err != nil {
 		log.Fatal(err)
 	}
